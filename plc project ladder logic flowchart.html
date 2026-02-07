@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLC Auto-Loading Flowchart — Mitsubishi GX Works 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #2a3654;
+    --text: #e2e8f0;
+    --text-dim: #8b9dc3;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-orange: #f97316;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 36px 24px 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, transparent 100%);
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent-cyan);
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+  }
+
+  .header-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-green);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .header h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #e2e8f0, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  .header p {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 300;
+  }
+
+  .legend {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+
+  .columns-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-height: calc(100vh - 140px);
+  }
+
+  .col {
+    flex: 0 0 auto;
+    width: 320px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .col:last-child { border-right: none; }
+
+  .col-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .col-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .col-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .col-header h2 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+  }
+
+  .col-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 100px;
+    border: 1px solid;
+    margin-top: 6px;
+    opacity: 0.8;
+  }
+
+  .col-body {
+    padding: 16px 14px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+  }
+
+  .node {
+    position: relative;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    width: 100%;
+    max-width: 290px;
+    line-height: 1.5;
+  }
+
+  .node .device {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    opacity: 0.65;
+    margin-top: 4px;
+    display: block;
+    line-height: 1.4;
+  }
+
+  .node .step-badge {
+    position: absolute;
+    top: -7px;
+    left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .node-start {
+    background: linear-gradient(135deg, #065f46, #047857);
+    border: 1px solid #10b981;
+    border-radius: 50px;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    color: #d1fae5;
+  }
+
+  .node-end {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border: 1px solid #ef4444;
+    border-radius: 50px;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+  }
+
+  .node-process {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .node-decision {
+    background: var(--surface);
+    border: 2px solid var(--accent-yellow);
+    border-radius: 4px;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.06);
+    color: #fde68a;
+    padding: 10px 14px;
+  }
+
+  .node-output {
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    border: 1px solid var(--accent-purple);
+    color: #c4b5fd;
+  }
+
+  .node-estop {
+    background: linear-gradient(135deg, #450a0a, #7f1d1d);
+    border: 2px solid var(--accent-red);
+    color: #fca5a5;
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.12);
+    animation: glow-red 3s infinite;
+  }
+
+  @keyframes glow-red {
+    0%, 100% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.12); }
+    50% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.25); }
+  }
+
+  .node-servo {
+    background: linear-gradient(135deg, #0c2d48, #1a3f5c);
+    border: 1px solid var(--accent-cyan);
+    color: #a5f3fc;
+  }
+
+  .node-sensor {
+    background: linear-gradient(135deg, #1c1917, #292524);
+    border: 1px solid var(--accent-orange);
+    color: #fed7aa;
+  }
+
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: 32px;
+    width: 2px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--border);
+  }
+
+  .arrow-label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .al-green { background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.3); }
+  .al-cyan { background: rgba(6,182,212,0.12); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.3); }
+  .al-red { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.3); }
+
+  .mini-branch {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 290px;
+  }
+
+  .mini-branch-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .mini-branch-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-bottom: 6px;
+  }
+
+  .mbh-blue { background: rgba(59,130,246,0.1); color: var(--accent-blue); border: 1px solid rgba(59,130,246,0.25); }
+  .mbh-orange { background: rgba(249,115,22,0.1); color: var(--accent-orange); border: 1px solid rgba(249,115,22,0.25); }
+  .mbh-green { background: rgba(16,185,129,0.1); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.25); }
+  .mbh-red { background: rgba(239,68,68,0.1); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.25); }
+
+  .mini-node {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 10px;
+    text-align: center;
+    width: 100%;
+    line-height: 1.4;
+  }
+
+  .mini-node .device {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    opacity: 0.6;
+    margin-top: 3px;
+    display: block;
+  }
+
+  .mini-arrow {
+    width: 2px; height: 18px;
+    background: var(--border);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .mini-arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: -3px;
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--border);
+  }
+
+  .merge-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 4px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+  }
+
+  .loop-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-cyan);
+    padding: 5px 12px;
+    border: 1px solid rgba(6,182,212,0.3);
+    background: rgba(6,182,212,0.05);
+    border-radius: 6px;
+  }
+
+  .loop-back::before { content: '↩'; font-size: 12px; }
+
+  .callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.5;
+    width: 100%;
+    max-width: 290px;
+  }
+
+  .callout-info { background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); color: #93c5fd; }
+  .callout-warn { background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.15); color: #fde68a; }
+  .callout-danger { background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.15); color: #fca5a5; }
+  .callout-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+  .skip-line {
+    position: relative;
+    width: 100%;
+    max-width: 290px;
+    border: 2px dashed var(--accent-red);
+    border-radius: 10px;
+    padding: 14px 12px 10px;
+    background: rgba(239,68,68,0.03);
+  }
+
+  .skip-line-label {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 10px;
+    background: var(--bg);
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .skip-content {
+    text-align: center;
+    color: var(--accent-red);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+  }
+
+  .col-green .col-header { background: rgba(16,185,129,0.04); }
+  .col-blue .col-header { background: rgba(59,130,246,0.04); }
+  .col-cyan .col-header { background: rgba(6,182,212,0.04); }
+  .col-purple .col-header { background: rgba(139,92,246,0.04); }
+  .col-red .col-header { background: rgba(239,68,68,0.06); }
+
+  .col-connector {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: var(--bg);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+    margin-bottom: 0;
+  }
+
+  .col-connector::after {
+    content: '→';
+    color: var(--accent-cyan);
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="header">
+  <div class="header-badge">MITSUBISHI GX WORKS 2 — LADDER LOGIC</div>
+  <h1>Auto-Loading System Flowchart</h1>
+  <p>Sequential control with E-Stop handling, servo positioning, metal/non-metal sorting & warehouse storage</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Start/End</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--surface2); border:1px solid var(--border)"></div>Process</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--surface); border:2px solid var(--accent-yellow)"></div>Decision</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#312e81; border:1px solid var(--accent-purple)"></div>Output</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a3f5c; border:1px solid var(--accent-cyan)"></div>Servo</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7f1d1d; border:2px solid var(--accent-red)"></div>Emergency</div>
+  <div class="legend-item" style="margin-left:8px; padding-left:12px; border-left:1px solid var(--border);">
+    <span style="color:var(--accent-cyan);">→</span> Read columns left to right
+  </div>
+</div>
+
+<div class="columns-wrapper">
+
+  <!-- ===== COL 1: INITIALIZATION ===== -->
+  <div class="col col-green">
+    <div class="col-header">
+      <div class="col-header-inner">
+        <div class="col-num" style="background:rgba(16,185,129,0.15); color:var(--accent-green);">1</div>
+        <h2>Initialization &<br>Origin Return</h2>
+      </div>
+      <div class="col-tag" style="color:var(--accent-green); border-color:rgba(16,185,129,0.3);">ladder_suto 0–150</div>
+    </div>
+    <div class="col-body">
+      <div class="node node-start">⏻ PLC Power ON<span class="device">SM0→Y70 · X70→Y71</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 1</span>All-Ready Check<span class="device">U7\G877.1 → SET M0</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-green">M1 pressed</span></div>
+      <div class="node node-servo">Servo Origin Return<span class="device">MOV K9001→D2<br>ZP.PSTRT1 U7 D0<br>wait M100</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process">Startup Timer<span class="device">M1999→T1999 (0.5s)</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 2</span>SET M2 — Origin OK<span class="device">M100 OK · no M101</span></div>
+      <div class="arrow"></div>
+      <div class="node node-sensor">All Sensors Home?<span class="device">X0·X2·X4·X6·X8<br>X0A·X0D·X0F·M2·M0</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-green">ALL OK</span></div>
+      <div class="node node-process" style="border-color:var(--accent-green);">SET M4 — Start Ready<span class="device">시작준비완료</span></div>
+      <div class="arrow"></div>
+      <div class="node node-decision">X15 (PB1) &amp; M4<br>&amp; X16 OFF?</div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-green">YES</span></div>
+      <div class="node node-process" style="border-color:var(--accent-blue);">SET M1000 — Auto Start<span class="device">Self-hold latch</span></div>
+      <div class="arrow"></div>
+      <div class="col-connector">Continue to Col 2</div>
+    </div>
+  </div>
+
+  <!-- ===== COL 2: MAIN AUTO SEQUENCE ===== -->
+  <div class="col col-blue">
+    <div class="col-header">
+      <div class="col-header-inner">
+        <div class="col-num" style="background:rgba(59,130,246,0.15); color:var(--accent-blue);">2</div>
+        <h2>Main Auto-Loading<br>Sequence</h2>
+      </div>
+      <div class="col-tag" style="color:var(--accent-blue); border-color:rgba(59,130,246,0.3);">ladder_suto 160–240</div>
+    </div>
+    <div class="col-body">
+      <div class="node node-process"><span class="step-badge">STEP 3</span>Supply Forward<span class="device">M1000+X0 → M1001 → Y20</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X1 전진완</span></div>
+      <div class="node node-process"><span class="step-badge">STEP 4</span>Supply Retract<span class="device">X1 → M1002 → Y21</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X2 후진센서</span></div>
+      <div class="node node-process"><span class="step-badge">STEP 5</span>Distribute Forward +<br>Conveyor ON<span class="device">M1002+X2 → M1017<br>→ Y22 + Y2E</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X3 전진완</span></div>
+      <div class="node node-process"><span class="step-badge">STEP 6</span>Distribute Retract<span class="device">X3 → M1003 → Y23</span></div>
+      <div class="arrow"></div>
+      <div class="node node-decision">Metal Detect?<br>X11 / X12</div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="mini-branch">
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-blue">Metal</span>
+          <div class="mini-node" style="background:var(--surface2); border:1px solid rgba(59,130,246,0.3); color:#93c5fd;">M1005 금릴<span class="device">INCP D1007</span></div>
+        </div>
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-orange">Non-Metal</span>
+          <div class="mini-node" style="background:var(--surface2); border:1px solid rgba(249,115,22,0.3); color:#fed7aa;">M1004 비금릴<span class="device">INCP D1008</span></div>
+        </div>
+      </div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="merge-indicator">▼ merge</div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="node node-process"><span class="step-badge">STEP 7</span>Stopper Down<span class="device">X8+M1003 → M1006 → Y27</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X13 감지</span></div>
+      <div class="node node-process"><span class="step-badge">STEP 8</span>Belt OFF<span class="device">X13+M1006 → M1009</span></div>
+      <div class="arrow"></div>
+      <div class="col-connector">Continue to Col 3</div>
+    </div>
+  </div>
+
+  <!-- ===== COL 3: SERVO + SUCTION PICK ===== -->
+  <div class="col col-cyan">
+    <div class="col-header">
+      <div class="col-header-inner">
+        <div class="col-num" style="background:rgba(6,182,212,0.15); color:var(--accent-cyan);">3</div>
+        <h2>Servo Position &<br>Suction Pickup</h2>
+      </div>
+      <div class="col-tag" style="color:var(--accent-cyan); border-color:rgba(6,182,212,0.3);">ladder_suto 244–360</div>
+    </div>
+    <div class="col-body">
+      <div class="node node-servo"><span class="step-badge">STEP 9</span>Servo → Pick Position<span class="device">MOV K1→D2<br>ZP.PSTRT1 → wait M100</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 10</span>Suction ON<span class="device">M1010 → Y2A + T1010(5)</span></div>
+      <div class="arrow"></div>
+      <div class="callout callout-info">
+        <span class="callout-icon">📐</span>
+        <div><strong>D2 Position Map</strong><br>Count 1→K2 · Count 2→K4<br>Count 3→K6</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node node-servo"><span class="step-badge">STEP 11</span>Servo → Warehouse Slot<span class="device">T1010 → MOV Kn→D2<br>ZP.PSTRT1 → wait M100</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 12</span>Suction Arm Forward<span class="device">M1011 → Y28 흡착전진</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X0B 전진완</span></div>
+      <div class="node node-process">Wait T1011 (0.5s)<span class="device">Pre-release delay</span></div>
+      <div class="arrow"></div>
+      <div class="node node-servo"><span class="step-badge">STEP 13</span>Servo Lower to Drop<span class="device">MOV K9→D2 → ZP.PSTRT1</span></div>
+      <div class="arrow"></div>
+      <div class="col-connector">Continue to Col 4</div>
+    </div>
+  </div>
+
+  <!-- ===== COL 4: PLACE + WAREHOUSE ===== -->
+  <div class="col col-purple">
+    <div class="col-header">
+      <div class="col-header-inner">
+        <div class="col-num" style="background:rgba(139,92,246,0.15); color:var(--accent-purple);">4</div>
+        <h2>Place, Retract &<br>Warehouse Output</h2>
+      </div>
+      <div class="col-tag" style="color:var(--accent-purple); border-color:rgba(139,92,246,0.3);">ladder_suto 387–488</div>
+    </div>
+    <div class="col-body">
+      <div class="node node-process"><span class="step-badge">STEP 14</span>Suction OFF — Release<span class="device">M1012 → Y2A OFF</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process">Wait T1012 (0.5s)<span class="device">Post-release delay</span></div>
+      <div class="arrow"></div>
+      <div class="node node-servo"><span class="step-badge">STEP 15</span>Servo Raise<span class="device">MOV K8→D2 → ZP.PSTRT1</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 16</span>Suction Arm Retract<span class="device">M1013 → Y29 흡착후진</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-cyan">X0A 후진완</span></div>
+      <div class="node node-servo">Servo Return Home<span class="device">MOV K5→D2 → ZP.PSTRT1</span></div>
+      <div class="arrow"></div>
+      <div class="node node-process"><span class="step-badge">STEP 17</span>Stopper Up<span class="device">M1014 → Y27 OFF</span></div>
+      <div class="arrow"></div>
+      <div class="node node-decision" style="font-size:11px;">Warehouse Direction</div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="mini-branch">
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-blue">Metal</span>
+          <div class="mini-node" style="background:linear-gradient(135deg,#1e1b4b,#312e81); border:1px solid var(--accent-purple); color:#c4b5fd;">M1007→Y2B<br>창고 Fwd</div>
+        </div>
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-orange">Non-Metal</span>
+          <div class="mini-node" style="background:linear-gradient(135deg,#1e1b4b,#312e81); border:1px solid var(--accent-purple); color:#c4b5fd;">M1008→Y2C<br>창고 Bwd</div>
+        </div>
+      </div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="merge-indicator">▼ merge</div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="node node-decision" style="font-size:11px;">X0F Material Present?</div>
+      <div class="arrow" style="height:20px"></div>
+      <div class="mini-branch">
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-green">Yes</span>
+          <div class="mini-node" style="background:var(--surface2); border:1px solid rgba(16,185,129,0.3); color:#6ee7b7;">M1015 리셋</div>
+          <div class="mini-arrow"></div>
+          <div class="loop-back" style="font-size:9px;">→ Col 2 Step 3</div>
+        </div>
+        <div class="mini-branch-col">
+          <span class="mini-branch-header mbh-red">No</span>
+          <div class="mini-node" style="background:var(--surface2); border:1px solid rgba(239,68,68,0.3); color:#fca5a5;">M1016 원점복귀<br><span class="device">RST D1007/D1008</span></div>
+          <div class="mini-arrow"></div>
+          <div class="node node-end" style="font-size:11px; padding:8px 12px;">Cycle End</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COL E-STOP ===== -->
+  <div class="col col-red" style="border-left:2px solid rgba(239,68,68,0.3);">
+    <div class="col-header">
+      <div class="col-header-inner">
+        <div class="col-num" style="background:rgba(239,68,68,0.2); color:var(--accent-red);">!</div>
+        <h2>Emergency Stop<br>(Any Time)</h2>
+      </div>
+      <div class="col-tag" style="color:var(--accent-red); border-color:rgba(239,68,68,0.3);">ladder_estop + suto:150</div>
+    </div>
+    <div class="col-body">
+      <div class="callout callout-danger">
+        <span class="callout-icon">⚡</span>
+        <div>Checked <strong>every scan</strong>.<br>Can interrupt any step.</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node node-estop">🚨 X16 Pressed<span class="device">비상정지 button</span></div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-red">LATCH</span></div>
+      <div class="node node-estop">SET M1100<br>비상유지 (E-Stop Hold)<span class="device">X16 ON + X17 OFF<br>→ M1100 self-hold</span></div>
+      <div class="arrow"></div>
+      <div class="node node-output" style="background:linear-gradient(135deg,#450a0a,#7f1d1d); border-color:var(--accent-red); color:#fca5a5;">Y74 축정지 — Axis Stop<span class="device">T1174 → servo halt</span></div>
+      <div class="arrow"></div>
+      <div class="skip-line">
+        <span class="skip-line-label">CJ P1 SKIP</span>
+        <div class="skip-content">M1100 → CJ P1<br>All auto code SKIPPED<br>Jump to line 488</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="callout callout-warn" style="font-size:10px;">
+        <span class="callout-icon">⚠</span>
+        <div><strong>Suction Safety</strong><br>M1101: Hold suction ON<br>M1102: Retract arm (X0A)<br>M1103: Release after stow<br>Servo → K1 then K8</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="node node-estop" style="font-size:11px;">P1 → RST M2, SET M999<span class="device">Origin cleared · safe idle</span></div>
+      <div class="arrow"></div>
+      <div class="node node-decision" style="border-color:var(--accent-green);">X17 재기동<br>Restart?</div>
+      <div class="arrow" style="height:36px"><span class="arrow-label al-green">YES</span></div>
+      <div class="node node-process" style="border-color:var(--accent-green);">Clear M1100<br>Re-initialize<span class="device">M1170 check → Col 1</span></div>
+      <div class="arrow"></div>
+      <div class="node node-end" style="font-size:11px; padding:10px 14px;">END scan</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
